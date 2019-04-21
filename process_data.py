@@ -1,6 +1,7 @@
 import csv
 import numpy as np
-
+import matplotlib.pyplot as plt
+from scipy import stats
 row_count=0
 with open("data.csv", 'r') as f:
     for line in f:
@@ -74,26 +75,122 @@ AQI_O3 = np.zeros((int(np.size(AQI_O3_temp, 0)/3)))
 AQI_CO = np.zeros((int(np.size(AQI_CO_temp, 0)/3)))
 
 #find the max out of the 8 hour averages for O3 and CO
-for i in range(0, np.size(AQI_O3, 0), 3):
+for i in range(0, np.size(AQI_O3_temp, 0), 3):
     AQI_O3[int(i/3)] = np.max(AQI_O3_temp[i:i+2])
     AQI_CO[int(i/3)] = np.max(AQI_CO_temp[i:i+2])
 
 #calculate the AQI for each day
 AQI = np.zeros((np.size(AQI_PM10, 0)))
+AQI_comp = np.zeros((np.size(AQI_PM10, 0)))
+
 for i in range(np.size(AQI_PM10, 0)):
     AQI[i] = np.max([AQI_PM25[i], AQI_PM10[i], AQI_SO2[i], AQI_NO2[i], AQI_O3[i], AQI_CO[i]])
-
+    AQI_comp[i] = np.argmax([AQI_PM25[i], AQI_PM10[i], AQI_SO2[i], AQI_NO2[i], AQI_O3[i], AQI_CO[i]])
 
 
 months = [31, 28, 31, 30, 31, 30, 31,  31, 30, 31, 30, 31]
 monthlyAQI = np.zeros(12)
+monthlyAQI_cause = np.zeros(12)
+
+monthlyPM25 = np.zeros(12)
+monthlyPM10 = np.zeros(12)
+monthlySO2 = np.zeros(12)
+monthlyNO2 = np.zeros(12)
+monthlyO3 = np.zeros(12)
+monthlyCO = np.zeros(12)
 
 cumul_days = 0
 for i in range(np.size(months, 0)):
     X = AQI[cumul_days:cumul_days+months[i]]
+    Y = AQI_comp[cumul_days:cumul_days+months[i]]
     a = np.nonzero(X)
     monthlyAQI[i] = np.mean(X[a])
+    monthlyAQI_cause[i] = stats.mode(Y)[0]
+
+    X = AQI_PM25[cumul_days:cumul_days+months[i]]
+    a = np.nonzero(X)
+    monthlyPM25[i] = np.mean(X[a])
+
+    X = AQI_PM10[cumul_days:cumul_days+months[i]]
+    a = np.nonzero(X)
+    monthlyPM10[i] = np.mean(X[a])
+
+    X = AQI_SO2[cumul_days:cumul_days+months[i]]
+    a = np.nonzero(X)
+    monthlySO2[i] = np.mean(X[a])
+
+    X = AQI_NO2[cumul_days:cumul_days+months[i]]
+    a = np.nonzero(X)
+    monthlyNO2[i] = np.mean(X[a])
+
+    X = AQI_O3[cumul_days:cumul_days+months[i]]
+    a = np.nonzero(X)
+    monthlyO3[i] = np.mean(X[a])
+
+    X = AQI_CO[cumul_days:cumul_days+months[i]]
+    a = np.nonzero(X)
+    monthlyCO[i] = np.mean(X[a])
+
     cumul_days = cumul_days + months[i]
 
 print(monthlyAQI)
 print(np.mean(monthlyAQI))
+print(monthlyAQI_cause)
+
+pm10mask = np.isfinite(monthlyPM10)
+pm25mask = np.isfinite(monthlyPM25)
+so2mask = np.isfinite(monthlySO2)
+no2mask = np.isfinite(monthlyNO2)
+o3mask = np.isfinite(monthlyO3)
+comask = np.isfinite(monthlyCO)
+
+monthsX = np.arange(12) + 1
+
+print(monthlyPM10)
+print(monthlyPM25)
+print(monthlySO2)
+print(monthlyNO2)
+print(monthlyO3)
+print(monthlyCO)
+
+plt.plot(monthsX, monthlyAQI)
+plt.xlabel("Months")
+plt.ylabel("AQI")
+plt.show()
+
+plt.plot(monthsX[pm10mask], monthlyPM10[pm10mask])
+plt.xlabel("Months")
+plt.ylabel("PM10 index")
+plt.show()
+
+plt.plot(monthsX[pm25mask], monthlyPM25[pm25mask])
+plt.xlabel("Months")
+plt.ylabel("PM2.5 index")
+plt.show()
+
+plt.plot(monthsX[so2mask], monthlySO2[so2mask])
+plt.xlabel("Months")
+plt.ylabel("SO2 index")
+plt.show()
+
+plt.plot(monthsX[no2mask], monthlyNO2[no2mask])
+plt.xlabel("Months")
+plt.ylabel("NO2 index")
+plt.show()
+
+plt.plot(monthsX[o3mask], monthlyO3[o3mask])
+plt.xlabel("Months")
+plt.ylabel("O3 index")
+plt.show()
+
+plt.plot(monthsX[comask], monthlyCO[comask])
+plt.xlabel("Months")
+plt.ylabel("CO index")
+plt.show()
+
+#calculate the histogram of AQI severity
+plt.hist(AQI, bins = [0,50,100,200,300,400, 500], stacked=True)
+plt.title("Histogram of AQI vs days")
+plt.show()
+hist = np.histogram(AQI, [0, 50, 100, 200, 300, 400, 500])
+print(hist)
